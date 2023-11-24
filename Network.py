@@ -7,10 +7,10 @@ from dataCreation import *
 class Network():
     def __init__(self):
         self.layers = [
-            Layer(NEURON_COUNT[0], NEURON_COUNT[1], 'reLU'),
+            Layer(ManualMLP.NEURON_COUNT[0], ManualMLP.NEURON_COUNT[1], 'reLU'),
             # Layer(NEURON_COUNT[1],NEURON_COUNT[2],'reLu'),
             # Layer(NEURON_COUNT[2],NEURON_COUNT[3],'reLu'),
-            Layer(NEURON_COUNT[1], NEURON_COUNT[2], 'softMax')
+            Layer(ManualMLP.NEURON_COUNT[1], ManualMLP.NEURON_COUNT[2], 'softMax')
         ]
 
     def fit(self, xTrain, yTrain, xVal, yVal):
@@ -18,12 +18,12 @@ class Network():
         epoch = 1
         successRate = 0.0
         bestSuccessRate = -1.0
-        while ((successRate < SUCCESS_MIN) and (successRate-bestSuccessRate > SUCCESS_EARLY_STOP)):
+        while ((successRate < ManualMLP.SUCCESS_MIN) and (successRate-bestSuccessRate > ManualMLP.SUCCESS_EARLY_STOP)):
             print("epoch: "+f"{epoch} ".rjust(3), end='')
-            for i in range(0, xTrain.shape[0], BATCH_SIZE):
-                if int(i/BATCH_SIZE) % PROGRESS_CHECK == 0:
+            for i in range(0, xTrain.shape[0], ManualMLP.BATCH_SIZE):
+                if int(i/ManualMLP.BATCH_SIZE) % ManualMLP.PROGRESS_CHECK == 0:
                     print(".", end='')
-                self.fitBatch(xTrain[i:i+BATCH_SIZE], yTrain[i:i+BATCH_SIZE])
+                self.fitBatch(xTrain[i:i+ManualMLP.BATCH_SIZE], yTrain[i:i+ManualMLP.BATCH_SIZE])
 
             if successRate > bestSuccessRate:
                 bestSuccessRate = successRate
@@ -52,9 +52,9 @@ class Network():
 
         # TODO move np.matmul(grad, ai.transpose((0, 2, 1))).sum(axis=0) here or this matmul to above
         for layer, grad, ai in zip(self.layers, grads, a):
-            layer.w = layer.w[0] - LEARNING_SPEED * \
+            layer.w = layer.w[0] - ManualMLP.LEARNING_SPEED * \
                 np.matmul(grad, ai.transpose((0, 2, 1))).sum(axis=0)
-            layer.b = layer.b[0] - LEARNING_SPEED * grad.sum(axis=0)
+            layer.b = layer.b[0] - ManualMLP.LEARNING_SPEED * grad.sum(axis=0)
 
     def classify(self, x):
         for layer in self.layers:
@@ -74,7 +74,7 @@ class Network():
         # print("result",successRate)
         return successRate
 
-    def expandSize(self, size=BATCH_SIZE):
+    def expandSize(self, size=ManualMLP.BATCH_SIZE):
         for layer in self.layers:
             # replicate shallow copy
             layer.w = np.stack([layer.w for _ in range(size)], axis=0)
