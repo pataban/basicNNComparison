@@ -1,6 +1,7 @@
+import tensorflow as tf
+
 from Layer import Layer
 from Network import Network
-
 from constants import *
 
 
@@ -20,7 +21,8 @@ def runManualMLP(data):
     ])
 
     print('\nTraining manualMLP')
-    model.fit(data['xTrain'], data['yTrain'], data['xVal'], data['yVal'])
+    with tf.device('/device:GPU:0'):
+        model.fit(data['xTrain'], data['yTrain'], data['xVal'], data['yVal'])
 
     print('\nEvaluating manualMLP')
     print(model.evaluate(data['xTest'], data['yTest']), '\n')

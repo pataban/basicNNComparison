@@ -1,4 +1,4 @@
-import numpy as np
+import tensorflow as tf
 
 from constants import *
 
@@ -8,7 +8,9 @@ class Network():
         self.layers = layers
 
     def fit(self, xTrain, yTrain, xVal, yVal):
-        yTrain = Network.toOneHotNotation(yTrain)
+        yTrain = tf.one_hot(yTrain, 10, on_value=1.0,
+                            off_value=0.0, dtype=tf.float64)
+        yTrain = tf.reshape(yTrain, (yTrain.shape[0], yTrain.shape[1], 1))
         epoch = 1
         successRate = 0.0
         bestSuccessRate = -1.0
@@ -29,13 +31,13 @@ class Network():
 
     def fitBatch(self, xBatch, yBatch):
         for layer in self.layers:  # expand to batch size
-            layer.w = np.stack([layer.w] * xBatch.shape[0], axis=0)
-            layer.b = np.stack([layer.b] * xBatch.shape[0], axis=0)
+            layer.w = tf.stack([layer.w] * xBatch.shape[0], axis=0)
+            layer.b = tf.stack([layer.b] * xBatch.shape[0], axis=0)
 
         a = [xBatch]
         z = []
         for layer in self.layers:
-            z.append(np.matmul(layer.w, a[-1]) + layer.b)
+            z.append(tf.matmul(layer.w, a[-1]) + layer.b)
             a.append(layer.aFun(z[-1]))
 
         # empty list of length == len(layers)
@@ -46,33 +48,28 @@ class Network():
             # print(self.layers[i+1].w.transpose((0, 2, 1).shape)       #150x10
             # print(grads[i+1].shape)                                   #10x1
             # print(self.layers[i].aFunDer(z[i]).shape)                 #150x1
-            grads[i] = np.matmul(
-                self.layers[i+1].w.transpose((0, 2, 1)), grads[i+1])  # 150x1
+            grads[i] = tf.matmul(
+                self.layers[i+1].w, grads[i+1], transpose_a=True)      # 150x1
             grads[i] *= self.layers[i].aFunDer(z[i])
             # print(grads[i])                                           #150x1
 
         # shrink to normal size and update weights
         for layer, grad, ai in zip(self.layers, grads, a):
-            aGradSum = np.matmul(grad, ai.transpose((0, 2, 1))).sum(axis=0)
+            aGradSum = tf.reduce_sum(
+                tf.matmul(grad, ai, transpose_b=True), axis=0)
             layer.w = layer.w[0] - ManualMLP.LEARNING_SPEED * aGradSum
-            layer.b = layer.b[0] - ManualMLP.LEARNING_SPEED * grad.sum(axis=0)
+            layer.b = layer.b[0] - ManualMLP.LEARNING_SPEED * \
+                tf.reduce_sum(grad, axis=0)
 
     def classify(self, xData):
         for layer in self.layers:
             xData = layer.calc(xData)
-        return xData.argmax(axis=1).flatten()
+        return tf.reshape(tf.argmax(xData, axis=1), (xData.shape[0]))
 
     def evaluate(self, xData, yData):
         classification = self.classify(xData)
 
-        res = (classification-yData).astype(bool).astype(int)
+        res = tf.cast(tf.cast(classification-yData, tf.bool), tf.int32)
 
-        successRate = (xData.shape[0]-res.sum())/xData.shape[0]
+        successRate = (xData.shape[0]-tf.reduce_sum(res))/xData.shape[0]
         return successRate
-
-    @staticmethod
-    def toOneHotNotation(yData):
-        newY = np.full((yData.shape[0], 10, 1), fill_value=0)
-        for i, y in enumerate(yData):
-            newY[i, y] = 1
-        return newY
